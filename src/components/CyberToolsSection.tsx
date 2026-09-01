@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Image, Grid, FileText, Calculator, Wrench, Sparkles, CreditCard, Layers, FlipHorizontal } from 'lucide-react';
+import { Image, Grid, FileText, Calculator, Wrench, Sparkles, CreditCard, Layers, FlipHorizontal, Scissors, Zap } from 'lucide-react';
 import { Language, PriceSetting } from '../types';
 import { PhotoSignatureResizeTool } from './cyberTools/PhotoSignatureResizeTool';
 import { PassportPhotoGridTool } from './cyberTools/PassportPhotoGridTool';
 import { PdfToolsHub } from './cyberTools/PdfToolsHub';
 import { PrintBillingCalculator } from './cyberTools/PrintBillingCalculator';
 import { PvcCardPrintTool } from './cyberTools/PvcCardPrintTool';
+import { AutoCardCropSizerTool } from './cyberTools/AutoCardCropSizerTool';
 
 interface CyberToolsSectionProps {
   language: Language;
@@ -28,13 +29,22 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
   prices,
   onSaveCustomerBill
 }) => {
-  const [activeTool, setActiveTool] = useState<'pvc_card' | 'resize' | 'passport_grid' | 'pdf' | 'billing'>('pvc_card');
+  const [activeTool, setActiveTool] = useState<'auto_crop_card' | 'pvc_card' | 'resize' | 'passport_grid' | 'pdf' | 'billing'>('auto_crop_card');
 
   const tools = [
     {
+      id: 'auto_crop_card',
+      labelEn: 'Auto Card Cropper & Sizer',
+      labelBn: 'অটো কার্ড ক্রপ ও সাইজিং',
+      icon: Scissors,
+      descEn: 'Auto crop & CR80 sizing for Aadhaar, Voter, Ration, Ayushman, PAN',
+      descBn: 'আধার, ভোটার, রেশন, আয়ুষ্মান, প্যান কার্ডের অটো ক্রপ ও নিখুঁত সাইজ',
+      badge: 'Auto 1-Click'
+    },
+    {
       id: 'pvc_card',
-      labelEn: 'PVC & Smart Card Print (Brother T226)',
-      labelBn: 'পিভিসি কার্ড প্রিন্ট (Brother T226)',
+      labelEn: 'PVC Card Print Studio',
+      labelBn: 'পিভিসি কার্ড প্রিন্ট স্টুডিও',
       icon: CreditCard,
       descEn: 'Aadhaar, Voter, Ration & PVC Cards calibrated for Brother T226',
       descBn: 'আধার, ভোটার, রেশন ও পিভিসি কার্ড প্রিন্ট (Brother T226 ক্যালিব্রেটেড)',
@@ -88,14 +98,14 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
           </h2>
           <p className="text-xs sm:text-sm text-blue-100/90 max-w-2xl">
             {language === 'bn'
-              ? 'Brother DCP-T226 অপটিমাইজড আধার, ভোটার ও ডিজিটাল রেশন কার্ড পিভিসি প্রিন্ট, ফটো-সিগনেচার রিসাইজার, পাসপোর্ট শিট ও দ্রুত বিলিং।'
-              : 'All-in-one suite for Brother DCP-T226 PVC card printing (Aadhaar, Voter, Ration), instant photo resizing, passport sheets, and billing.'}
+              ? 'Brother DCP-T226 অপটিমাইজড সমস্ত কার্ডের অটো ক্রপ ও সাইজিং, আধার, ভোটার ও ডিজিটাল রেশন কার্ড পিভিসি প্রিন্ট, ফটো-সিগনেচার রিসাইজার, পাসপোর্ট শিট ও দ্রুত বিলিং।'
+              : 'All-in-one suite for Brother DCP-T226: 1-Click Auto Card Cropper & Sizing (Aadhaar, Voter, Ration, Ayushman, PAN), PVC print studio, photo resizing, passport sheets, and billing.'}
           </p>
         </div>
       </div>
 
       {/* Tool Selector Tabs Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {tools.map((t) => {
           const Icon = t.icon;
           const isActive = activeTool === t.id;
@@ -139,6 +149,7 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
 
       {/* Active Tool Render */}
       <div className="transition-all">
+        {activeTool === 'auto_crop_card' && <AutoCardCropSizerTool language={language} />}
         {activeTool === 'pvc_card' && <PvcCardPrintTool language={language} />}
         {activeTool === 'resize' && <PhotoSignatureResizeTool language={language} />}
         {activeTool === 'passport_grid' && <PassportPhotoGridTool language={language} />}

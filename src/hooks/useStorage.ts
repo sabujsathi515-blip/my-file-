@@ -115,10 +115,12 @@ export function useStorage() {
   });
 
   const [prices, setPrices] = useState<PriceSetting[]>(() => {
+    const savedVersion = localStorage.getItem('dsp_prices_version');
     const saved = localStorage.getItem('dsp_prices');
-    if (saved) {
+    if (saved && savedVersion === DATA_VERSION) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
+    localStorage.setItem('dsp_prices_version', DATA_VERSION);
     return INITIAL_PRICES;
   });
 

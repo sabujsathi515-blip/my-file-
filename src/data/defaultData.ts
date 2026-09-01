@@ -1192,6 +1192,7 @@ export const INITIAL_PRICES: PriceSetting[] = [
   { id: 'pr-1', serviceNameEn: 'B&W Print / Xerox (Per Page)', serviceNameBn: 'সাদা-কালো প্রিন্ট / জেরক্স (প্রতি পৃষ্ঠা)', rate: 2, unit: 'per page' },
   { id: 'pr-2', serviceNameEn: 'Color Print (Normal Paper)', serviceNameBn: 'কালার প্রিন্ট (সাধারণ কাগজ)', rate: 10, unit: 'per page' },
   { id: 'pr-3', serviceNameEn: 'Color Print (Glossy Photo Paper)', serviceNameBn: 'কালার প্রিন্ট (গ্লসি ফটো পেপার)', rate: 20, unit: 'per page' },
+  { id: 'pr-pvc', serviceNameEn: 'PVC Smart Card Print (Aadhaar/Voter/Ration - Brother T226)', serviceNameBn: 'পিভিসি স্মার্ট কার্ড প্রিন্ট (আধার/ভোটার/রেশন - Brother T226)', rate: 50, unit: 'per card' },
   { id: 'pr-4', serviceNameEn: 'Passport Size Photo (8 Copies)', serviceNameBn: 'পাসপোর্ট সাইজ ছবি (৮ কপি)', rate: 50, unit: '8 copies' },
   { id: 'pr-5', serviceNameEn: 'Passport Size Photo (16 Copies)', serviceNameBn: 'পাসপোর্ট সাইজ ছবি (১৬ কপি)', rate: 80, unit: '16 copies' },
   { id: 'pr-6', serviceNameEn: 'Document Scanning (Per Page to PDF)', serviceNameBn: 'ডকুমেন্ট স্ক্যান (প্রতি পৃষ্ঠা)', rate: 5, unit: 'per page' },

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Image, Grid, FileText, Calculator, Wrench, Sparkles } from 'lucide-react';
+import { Image, Grid, FileText, Calculator, Wrench, Sparkles, CreditCard, Layers, FlipHorizontal } from 'lucide-react';
 import { Language, PriceSetting } from '../types';
 import { PhotoSignatureResizeTool } from './cyberTools/PhotoSignatureResizeTool';
 import { PassportPhotoGridTool } from './cyberTools/PassportPhotoGridTool';
 import { PdfToolsHub } from './cyberTools/PdfToolsHub';
 import { PrintBillingCalculator } from './cyberTools/PrintBillingCalculator';
+import { PvcCardPrintTool } from './cyberTools/PvcCardPrintTool';
 
 interface CyberToolsSectionProps {
   language: Language;
@@ -27,9 +28,18 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
   prices,
   onSaveCustomerBill
 }) => {
-  const [activeTool, setActiveTool] = useState<'resize' | 'passport_grid' | 'pdf' | 'billing'>('resize');
+  const [activeTool, setActiveTool] = useState<'pvc_card' | 'resize' | 'passport_grid' | 'pdf' | 'billing'>('pvc_card');
 
   const tools = [
+    {
+      id: 'pvc_card',
+      labelEn: 'PVC & Smart Card Print (Brother T226)',
+      labelBn: 'পিভিসি কার্ড প্রিন্ট (Brother T226)',
+      icon: CreditCard,
+      descEn: 'Aadhaar, Voter, Ration & PVC Cards calibrated for Brother T226',
+      descBn: 'আধার, ভোটার, রেশন ও পিভিসি কার্ড প্রিন্ট (Brother T226 ক্যালিব্রেটেড)',
+      badge: 'Brother T226'
+    },
     {
       id: 'resize',
       labelEn: 'Photo & Signature Resize',
@@ -78,14 +88,14 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
           </h2>
           <p className="text-xs sm:text-sm text-blue-100/90 max-w-2xl">
             {language === 'bn'
-              ? 'চাকরির ফর্ম ফিলাপের জন্য ফটো ও সিগনেচার রিসাইজার, পাসপোর্ট ছবি শিট জেনারেটর, JPG to PDF কনভার্টার ও বিলিং ক্যালকুলেটর।'
-              : 'All-in-one suite for instant photo resizing, passport sheets, PDF bundling, and customer billing.'}
+              ? 'Brother DCP-T226 অপটিমাইজড আধার, ভোটার ও ডিজিটাল রেশন কার্ড পিভিসি প্রিন্ট, ফটো-সিগনেচার রিসাইজার, পাসপোর্ট শিট ও দ্রুত বিলিং।'
+              : 'All-in-one suite for Brother DCP-T226 PVC card printing (Aadhaar, Voter, Ration), instant photo resizing, passport sheets, and billing.'}
           </p>
         </div>
       </div>
 
       {/* Tool Selector Tabs Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {tools.map((t) => {
           const Icon = t.icon;
           const isActive = activeTool === t.id;
@@ -94,23 +104,28 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
               key={t.id}
               type="button"
               onClick={() => setActiveTool(t.id as any)}
-              className={`p-4 rounded-2xl border text-left transition-all flex items-start gap-3 shadow-2xs group cursor-pointer ${
+              className={`p-3.5 rounded-2xl border text-left transition-all flex items-start gap-2.5 shadow-2xs group cursor-pointer ${
                 isActive
-                  ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:border-blue-500 shadow-sm'
+                  ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:border-blue-500 shadow-sm ring-1 ring-blue-500/20'
                   : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-700'
               }`}
             >
               <div
-                className={`p-2.5 rounded-xl transition ${
+                className={`p-2 rounded-xl transition shrink-0 ${
                   isActive
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/60 group-hover:text-blue-600'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4" />
               </div>
-              <div className="overflow-hidden">
-                <h3 className={`font-bold text-xs sm:text-sm ${isActive ? 'text-blue-900 dark:text-blue-200' : 'text-slate-900 dark:text-white'}`}>
+              <div className="overflow-hidden min-w-0">
+                {t.badge && (
+                  <span className="inline-block text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 mb-0.5">
+                    {t.badge}
+                  </span>
+                )}
+                <h3 className={`font-bold text-xs sm:text-sm truncate ${isActive ? 'text-blue-900 dark:text-blue-200' : 'text-slate-900 dark:text-white'}`}>
                   {language === 'bn' ? t.labelBn : t.labelEn}
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
@@ -124,6 +139,7 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
 
       {/* Active Tool Render */}
       <div className="transition-all">
+        {activeTool === 'pvc_card' && <PvcCardPrintTool language={language} />}
         {activeTool === 'resize' && <PhotoSignatureResizeTool language={language} />}
         {activeTool === 'passport_grid' && <PassportPhotoGridTool language={language} />}
         {activeTool === 'pdf' && <PdfToolsHub language={language} />}

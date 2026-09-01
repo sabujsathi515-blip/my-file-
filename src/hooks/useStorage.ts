@@ -218,6 +218,10 @@ export function useStorage() {
     setNotices(prev => [item, ...prev]);
   };
 
+  const updateNotice = (updated: NoticeItem) => {
+    setNotices(prev => prev.map(n => n.id === updated.id ? updated : n));
+  };
+
   const deleteNotice = (id: string) => {
     setNotices(prev => prev.filter(n => n.id !== id));
   };
@@ -230,6 +234,10 @@ export function useStorage() {
     setJobs(prev => [item, ...prev]);
   };
 
+  const updateJob = (updated: JobItem) => {
+    setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
+  };
+
   const deleteJob = (id: string) => {
     setJobs(prev => prev.filter(j => j.id !== id));
   };
@@ -240,6 +248,10 @@ export function useStorage() {
       id: 'form-' + Date.now()
     };
     setForms(prev => [item, ...prev]);
+  };
+
+  const updateForm = (updated: FormItem) => {
+    setForms(prev => prev.map(f => f.id === updated.id ? updated : f));
   };
 
   const deleteForm = (id: string) => {
@@ -288,8 +300,24 @@ export function useStorage() {
     setIncomeExpenses(prev => prev.filter(r => r.id !== id));
   };
 
+  const addPrice = (price: Omit<PriceSetting, 'id'>) => {
+    const item: PriceSetting = {
+      ...price,
+      id: 'price-' + Date.now()
+    };
+    setPrices(prev => [...prev, item]);
+  };
+
   const updatePrice = (id: string, newRate: number) => {
     setPrices(prev => prev.map(p => p.id === id ? { ...p, rate: newRate } : p));
+  };
+
+  const updatePriceFull = (updated: PriceSetting) => {
+    setPrices(prev => prev.map(p => p.id === updated.id ? updated : p));
+  };
+
+  const deletePrice = (id: string) => {
+    setPrices(prev => prev.filter(p => p.id !== id));
   };
 
   const resetToDefault = () => {
@@ -362,17 +390,23 @@ export function useStorage() {
     updateService,
     deleteService,
     addNotice,
+    updateNotice,
     deleteNotice,
     addJob,
+    updateJob,
     deleteJob,
     addForm,
+    updateForm,
     deleteForm,
     addCustomer,
     updateCustomerStatus,
     deleteCustomer,
     addIncomeExpense,
     deleteIncomeExpense,
+    addPrice,
     updatePrice,
+    updatePriceFull,
+    deletePrice,
     resetToDefault,
     exportBackupJson,
     importBackupJson

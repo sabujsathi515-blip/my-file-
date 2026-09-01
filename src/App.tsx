@@ -86,17 +86,23 @@ export function App() {
     updateService,
     deleteService,
     addNotice,
+    updateNotice,
     deleteNotice,
     addJob,
+    updateJob,
     deleteJob,
     addForm,
+    updateForm,
     deleteForm,
     addCustomer,
     updateCustomerStatus,
     deleteCustomer,
     addIncomeExpense,
     deleteIncomeExpense,
+    addPrice,
     updatePrice,
+    updatePriceFull,
+    deletePrice,
     resetToDefault,
     exportBackupJson,
     importBackupJson
@@ -456,8 +462,18 @@ export function App() {
         onUpdateService={updateService}
         onDeleteService={deleteService}
         onAddNotice={addNotice}
+        onUpdateNotice={updateNotice}
         onDeleteNotice={deleteNotice}
+        onAddJob={addJob}
+        onUpdateJob={updateJob}
+        onDeleteJob={deleteJob}
+        onAddForm={addForm}
+        onUpdateForm={updateForm}
+        onDeleteForm={deleteForm}
+        onAddPrice={addPrice}
         onUpdatePrice={updatePrice}
+        onUpdatePriceFull={updatePriceFull}
+        onDeletePrice={deletePrice}
         onResetToDefault={resetToDefault}
         onExportBackup={exportBackupJson}
         onImportBackup={importBackupJson}

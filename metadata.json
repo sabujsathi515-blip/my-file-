@@ -1,0 +1,7 @@
+{
+  "name": "Digital Seva Portal",
+  "description": "All Government & Cyber Café Services in One Place. Modern portal for West Bengal & Central Government online services, Cyber Café utility tools, customer management, and official government resources.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

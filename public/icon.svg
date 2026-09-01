@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#primaryGrad)" />
+  <circle cx="256" cy="256" r="170" stroke="white" stroke-width="8" stroke-dasharray="16 12" opacity="0.4" />
+  <!-- Ashoka / Seva Chakra motif representation -->
+  <circle cx="256" cy="256" r="80" stroke="url(#goldGrad)" stroke-width="12" fill="#0f172a" fill-opacity="0.3" />
+  <path d="M256 120 V392 M120 256 H392 M160 160 L352 352 M160 352 L352 160" stroke="#60a5fa" stroke-width="4" stroke-linecap="round" opacity="0.6" />
+  <!-- Center Emblem / Monitor & Fingerprint/Seva icon -->
+  <path d="M190 220 C190 180, 322 180, 322 220 C322 260, 256 270, 256 310" stroke="white" stroke-width="14" stroke-linecap="round" fill="none" />
+  <circle cx="256" cy="340" r="10" fill="#fbbf24" />
+  <text x="256" y="445" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="34" letter-spacing="2">DIGITAL SEVA</text>
+</svg>

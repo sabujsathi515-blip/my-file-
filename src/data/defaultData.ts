@@ -1190,6 +1190,8 @@ export const INITIAL_INCOME_EXPENSES: IncomeExpenseRecord[] = [
 
 export const INITIAL_PRICES: PriceSetting[] = [
   { id: 'pr-1', serviceNameEn: 'B&W Print / Xerox (Per Page)', serviceNameBn: 'সাদা-কালো প্রিন্ট / জেরক্স (প্রতি পৃষ্ঠা)', rate: 2, unit: 'per page' },
+  { id: 'pr-job', serviceNameEn: 'Job Form Fill-up', serviceNameBn: 'চাকরির ফর্ম ফিলাপ (Job Form Fill-up)', rate: 30, unit: 'per form' },
+  { id: 'pr-scheme', serviceNameEn: 'Govt Scheme Form Fill-up', serviceNameBn: 'সরকারি স্কিম / প্রকল্প ফর্ম ফিলাপ', rate: 30, unit: 'per form' },
   { id: 'pr-2', serviceNameEn: 'Color Print (Normal Paper)', serviceNameBn: 'কালার প্রিন্ট (সাধারণ কাগজ)', rate: 10, unit: 'per page' },
   { id: 'pr-3', serviceNameEn: 'Color Print (Glossy Photo Paper)', serviceNameBn: 'কালার প্রিন্ট (গ্লসি ফটো পেপার)', rate: 20, unit: 'per page' },
   { id: 'pr-pvc', serviceNameEn: 'PVC Smart Card Print (Aadhaar/Voter/Ration - Brother T226)', serviceNameBn: 'পিভিসি স্মার্ট কার্ড প্রিন্ট (আধার/ভোটার/রেশন - Brother T226)', rate: 50, unit: 'per card' },
@@ -1198,7 +1200,6 @@ export const INITIAL_PRICES: PriceSetting[] = [
   { id: 'pr-6', serviceNameEn: 'Document Scanning (Per Page to PDF)', serviceNameBn: 'ডকুমেন্ট স্ক্যান (প্রতি পৃষ্ঠা)', rate: 5, unit: 'per page' },
   { id: 'pr-7', serviceNameEn: 'Lamination (A4 Size)', serviceNameBn: 'লেমিনেশন (এ৪ সাইজ)', rate: 20, unit: 'per piece' },
   { id: 'pr-8', serviceNameEn: 'Lamination (ID Card Size)', serviceNameBn: 'লেমিনেশন (আইডি কার্ড সাইজ)', rate: 10, unit: 'per piece' },
-  { id: 'pr-9', serviceNameEn: 'Online Job / Scheme Form Fill-up', serviceNameBn: 'অনলাইন চাকরি / প্রকল্পের ফর্ম ফিলাপ', rate: 70, unit: 'per form' },
   { id: 'pr-10', serviceNameEn: 'Pan Card Online Application', serviceNameBn: 'প্যান কার্ড অনলাইন আবেদন সার্ভিস', rate: 150, unit: 'per card' }
 ];
 

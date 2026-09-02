@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, Grid, FileText, Calculator, Wrench, Sparkles, CreditCard, Layers, FlipHorizontal, Scissors, Zap } from 'lucide-react';
-import { Language, PriceSetting } from '../types';
+import { CustomerRecord, Language, PriceSetting } from '../types';
 import { PhotoSignatureResizeTool } from './cyberTools/PhotoSignatureResizeTool';
 import { PassportPhotoGridTool } from './cyberTools/PassportPhotoGridTool';
 import { PdfToolsHub } from './cyberTools/PdfToolsHub';
@@ -11,17 +11,7 @@ import { AutoCardCropSizerTool } from './cyberTools/AutoCardCropSizerTool';
 interface CyberToolsSectionProps {
   language: Language;
   prices: PriceSetting[];
-  onSaveCustomerBill: (customer: {
-    customerName: string;
-    mobile: string;
-    serviceTaken: string;
-    amount: number;
-    paymentStatus: 'Paid' | 'Due';
-    printCount: number;
-    scanCount: number;
-    notes: string;
-    date: string;
-  }) => void;
+  onSaveCustomerBill: (customer: Omit<CustomerRecord, 'id' | 'createdAt'>) => void;
 }
 
 export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({

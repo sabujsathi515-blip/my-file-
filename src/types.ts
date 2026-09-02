@@ -88,7 +88,9 @@ export interface CustomerRecord {
   serviceTaken: string;
   date: string;
   amount: number;
-  paymentStatus: 'Paid' | 'Due';
+  paymentStatus: 'Paid' | 'Due' | 'Advance';
+  advanceAmount?: number;
+  dueAmount?: number;
   printCount: number;
   scanCount: number;
   notes?: string;

@@ -20,7 +20,7 @@ import {
   INITIAL_PRICES 
 } from '../data/defaultData';
 
-const DATA_VERSION = '2026.2';
+const DATA_VERSION = '2026.3';
 
 export function useStorage() {
   const [language, setLanguage] = useState<Language>(() => {
@@ -266,20 +266,24 @@ export function useStorage() {
     };
     setCustomers(prev => [item, ...prev]);
 
-    // Also optionally record as income
-    if (cust.amount > 0 && cust.paymentStatus === 'Paid') {
+    // Also optionally record collected cash as income
+    const collectedAmount = cust.paymentStatus === 'Paid' 
+      ? cust.amount 
+      : (cust.paymentStatus === 'Advance' ? (cust.advanceAmount || 0) : 0);
+
+    if (collectedAmount > 0) {
       addIncomeExpense({
         type: 'income',
         category: cust.serviceTaken.slice(0, 24),
-        amount: cust.amount,
-        description: `Service for ${cust.customerName} (${cust.mobile})`,
+        amount: collectedAmount,
+        description: `Service for ${cust.customerName} (${cust.paymentStatus === 'Advance' ? 'Advance Payment' : 'Full Payment'})`,
         date: cust.date,
         paymentMode: 'Cash'
       });
     }
   };
 
-  const updateCustomerStatus = (id: string, newStatus: 'Paid' | 'Due') => {
+  const updateCustomerStatus = (id: string, newStatus: 'Paid' | 'Due' | 'Advance') => {
     setCustomers(prev => prev.map(c => c.id === id ? { ...c, paymentStatus: newStatus } : c));
   };
 

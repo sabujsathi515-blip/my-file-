@@ -61,6 +61,7 @@ import {
   Wrench, 
   Award, 
   ArrowRight, 
+  ArrowLeft,
   CheckCircle2, 
   ExternalLink 
 } from 'lucide-react';
@@ -220,6 +221,39 @@ export function App() {
           </div>
         ) : (
           <>
+            {/* Universal Back to Home Button when viewing any specific section */}
+            {activeTab !== 'home' && (
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <button
+                  type="button"
+                  id="btn-global-back-to-home"
+                  onClick={() => {
+                    setActiveTab('home');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-xs transition active:scale-95 cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>{language === 'bn' ? '⬅ হোম পেজে ফিরে যান (Back to Home)' : '⬅ Back to Home'}</span>
+                </button>
+
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="hidden sm:inline">{language === 'bn' ? 'বর্তমান বিভাগ:' : 'Section:'}</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
+                    {activeTab === 'wb_gov' && (language === 'bn' ? 'পশ্চিমবঙ্গ সরকার' : 'WB Government')}
+                    {activeTab === 'central_gov' && (language === 'bn' ? 'কেন্দ্রীয় সরকার' : 'Central Government')}
+                    {activeTab === 'cyber_tools' && (language === 'bn' ? 'সাইবার ক্যাফে টুলস' : 'Cyber Café Tools')}
+                    {activeTab === 'forms' && (language === 'bn' ? 'অনলাইন ফর্ম' : 'Forms & Downloads')}
+                    {activeTab === 'jobs' && (language === 'bn' ? 'চাকরি ও নিয়োগ' : 'Jobs & Recruitment')}
+                    {activeTab === 'scholarship' && (language === 'bn' ? 'স্কলারশিপ' : 'Scholarship')}
+                    {activeTab === 'health_social' && (language === 'bn' ? 'স্বাস্থ্য ও পেনশন' : 'Health & Pension')}
+                    {activeTab === 'customer_khata' && (language === 'bn' ? 'কাস্টমার খাতা' : 'Customer Register')}
+                    {activeTab === 'income_expense' && (language === 'bn' ? 'আয় ও ব্যয়ের হিসাব' : 'Income & Expense')}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Tab 1: Home Dashboard */}
             {activeTab === 'home' && (
               <div className="space-y-8">
@@ -379,6 +413,7 @@ export function App() {
                 language={language}
                 prices={prices}
                 onSaveCustomerBill={addCustomer}
+                onBackToHome={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               />
             )}
 

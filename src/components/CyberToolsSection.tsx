@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, Grid, FileText, Calculator, Wrench, Sparkles, CreditCard, Layers, FlipHorizontal, Scissors, Zap } from 'lucide-react';
+import { Image, Grid, FileText, Calculator, Wrench, Sparkles, CreditCard, Layers, FlipHorizontal, Scissors, Zap, ArrowLeft } from 'lucide-react';
 import { CustomerRecord, Language, PriceSetting } from '../types';
 import { PhotoSignatureResizeTool } from './cyberTools/PhotoSignatureResizeTool';
 import { PassportPhotoGridTool } from './cyberTools/PassportPhotoGridTool';
@@ -12,12 +12,14 @@ interface CyberToolsSectionProps {
   language: Language;
   prices: PriceSetting[];
   onSaveCustomerBill: (customer: Omit<CustomerRecord, 'id' | 'createdAt'>) => void;
+  onBackToHome?: () => void;
 }
 
 export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
   language,
   prices,
-  onSaveCustomerBill
+  onSaveCustomerBill,
+  onBackToHome
 }) => {
   const [activeTool, setActiveTool] = useState<'auto_crop_card' | 'pvc_card' | 'resize' | 'passport_grid' | 'pdf' | 'billing'>('auto_crop_card');
 
@@ -50,11 +52,12 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
     },
     {
       id: 'passport_grid',
-      labelEn: 'Passport Photo Sheet',
-      labelBn: 'পাসপোর্ট ফটো শিট জেনারেটর',
+      labelEn: 'Passport Studio & Free AI',
+      labelBn: 'পাসপোর্ট ফটো এডিটর ও ফ্রি AI',
       icon: Grid,
-      descEn: 'Generate 4, 8, 12, 16 copies on 4x6 / A4 sheet',
-      descBn: '৪x৬ বা A4 পেপারে সরাসরি প্রিন্ট রেডি শিট'
+      descEn: 'Full photo editing, Free AI enhancer & 4x6/A4 print sheet',
+      descBn: 'ছবি এডিট এর সব অপশন, ফ্রি AI এনহ্যান্সার ও প্রিন্ট শিট',
+      badge: 'Free AI + Edit'
     },
     {
       id: 'pdf',
@@ -76,6 +79,21 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Top Back Navigation Button */}
+      {onBackToHome && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            id="btn-cyber-tools-back-home"
+            onClick={onBackToHome}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 shadow-2xs transition active:scale-95 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>{language === 'bn' ? '⬅ হোম পেজে ফিরে যান (Back to Home)' : '⬅ Back to Home'}</span>
+          </button>
+        </div>
+      )}
+
       {/* Banner */}
       <div className="bg-linear-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-blue-700/50 shadow-md">
         <div className="space-y-2">
@@ -139,7 +157,7 @@ export const CyberToolsSection: React.FC<CyberToolsSectionProps> = ({
 
       {/* Active Tool Render */}
       <div className="transition-all">
-        {activeTool === 'auto_crop_card' && <AutoCardCropSizerTool language={language} />}
+        {activeTool === 'auto_crop_card' && <AutoCardCropSizerTool language={language} onBack={onBackToHome} />}
         {activeTool === 'pvc_card' && <PvcCardPrintTool language={language} />}
         {activeTool === 'resize' && <PhotoSignatureResizeTool language={language} />}
         {activeTool === 'passport_grid' && <PassportPhotoGridTool language={language} />}

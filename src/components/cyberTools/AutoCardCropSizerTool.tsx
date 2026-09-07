@@ -40,7 +40,12 @@ import {
   Minus,
   ArrowUp,
   ArrowDown,
-  ArrowLeft
+  ArrowLeft,
+  Undo2,
+  Redo2,
+  FileCheck2,
+  Split,
+  FolderOpen
 } from 'lucide-react';
 import { Language } from '../../types';
 
@@ -65,9 +70,40 @@ export interface AutoDetectionResult {
   details: string;
 }
 
-export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ language }) => {
+// Robust PDF.js initializer with fallback worker
+let pdfjsWorkerInitialized = false;
+const initPdfJs = async () => {
+  const pdfjs = await import('pdfjs-dist');
+  if (!pdfjsWorkerInitialized) {
+    try {
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString();
+      pdfjsWorkerInitialized = true;
+    } catch {
+      try {
+        const workerBlob = new Blob(
+          [`importScripts('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs');`],
+          { type: 'application/javascript' }
+        );
+        pdfjs.GlobalWorkerOptions.workerSrc = URL.createObjectURL(workerBlob);
+        pdfjsWorkerInitialized = true;
+      } catch (blobErr) {
+        console.warn('PDF.js worker fallback error:', blobErr);
+      }
+    }
+  }
+  return pdfjs;
+};
+
+export const AutoCardCropSizerTool: React.FC<{ language: Language; onBack?: () => void }> = ({ language, onBack }) => {
   // Active Card Category
   const [cardType, setCardType] = useState<AutoCardType>('aadhaar');
+
+  // Step Workflow Navigation State ('upload' -> 'crop' -> 'print')
+  const [workflowStep, setWorkflowStep] = useState<'upload' | 'crop' | 'print'>('upload');
+  const [layoutMode, setLayoutMode] = useState<'step_wizard' | 'side_by_side'>('step_wizard');
 
   // Auto Map Detection State
   const [autoDetectResult, setAutoDetectResult] = useState<AutoDetectionResult | null>({
@@ -76,8 +112,8 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
     dimensions: '85.60 mm × 53.98 mm (ISO/IEC CR80)',
     source: 'card_preset',
     confidence: 99.8,
-    frontBox: { x: 4.8, y: 67.5, width: 43.8, height: 28.2 },
-    backBox: { x: 51.4, y: 67.5, width: 43.8, height: 28.2 },
+    frontBox: { x: 3.8, y: 67.2, width: 44.5, height: 28.5 },
+    backBox: { x: 51.5, y: 67.2, width: 44.5, height: 28.5 },
     details: 'Front & Back auto-aligned to exact Brother DCP-T226 PVC template'
   });
   const [isAutoDetecting, setIsAutoDetecting] = useState<boolean>(false);
@@ -107,9 +143,67 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
 
   // Crop Boxes for Front and Back (percentage of image: 0 to 100)
   // Standard CR80 Card Aspect Ratio: 85.6 / 53.98 ≈ 1.586
-  const [frontCrop, setFrontCrop] = useState<CropBox>({ x: 4.8, y: 67.5, width: 43.8, height: 28.2 });
-  const [backCrop, setBackCrop] = useState<CropBox>({ x: 51.4, y: 67.5, width: 43.8, height: 28.2 });
+  const [frontCrop, setFrontCrop] = useState<CropBox>({ x: 3.8, y: 67.2, width: 44.5, height: 28.5 });
+  const [backCrop, setBackCrop] = useState<CropBox>({ x: 51.5, y: 67.2, width: 44.5, height: 28.5 });
   const [activeCropHandle, setActiveCropHandle] = useState<'front' | 'back' | null>('front');
+
+  // Backward / Forward History Stack for Undo / Redo
+  interface HistoryEntry {
+    frontCrop: CropBox;
+    backCrop: CropBox;
+    sourceRotation: number;
+    cardType: AutoCardType;
+  }
+  const [cropHistory, setCropHistory] = useState<HistoryEntry[]>([
+    {
+      frontCrop: { x: 3.8, y: 67.2, width: 44.5, height: 28.5 },
+      backCrop: { x: 51.5, y: 67.2, width: 44.5, height: 28.5 },
+      sourceRotation: 0,
+      cardType: 'aadhaar'
+    }
+  ]);
+  const [cropHistoryIndex, setCropHistoryIndex] = useState<number>(0);
+
+  const recordHistory = (fBox: CropBox, bBox: CropBox, rot: number = sourceRotation, type: AutoCardType = cardType) => {
+    setCropHistory(prev => {
+      const sliced = prev.slice(0, cropHistoryIndex + 1);
+      return [...sliced, { frontCrop: fBox, backCrop: bBox, sourceRotation: rot, cardType: type }];
+    });
+    setCropHistoryIndex(prev => prev + 1);
+  };
+
+  const handleBackwardUndo = () => {
+    if (cropHistoryIndex > 0) {
+      const prev = cropHistory[cropHistoryIndex - 1];
+      setFrontCrop(prev.frontCrop);
+      setBackCrop(prev.backCrop);
+      setSourceRotation(prev.sourceRotation);
+      setCardType(prev.cardType);
+      setCropHistoryIndex(cropHistoryIndex - 1);
+    }
+  };
+
+  const handleForwardRedo = () => {
+    if (cropHistoryIndex < cropHistory.length - 1) {
+      const next = cropHistory[cropHistoryIndex + 1];
+      setFrontCrop(next.frontCrop);
+      setBackCrop(next.backCrop);
+      setSourceRotation(next.sourceRotation);
+      setCardType(next.cardType);
+      setCropHistoryIndex(cropHistoryIndex + 1);
+    }
+  };
+
+  // Step Workflow Navigation Forward & Backward
+  const handleGoForwardStep = () => {
+    if (workflowStep === 'upload') setWorkflowStep('crop');
+    else if (workflowStep === 'crop') setWorkflowStep('print');
+  };
+
+  const handleGoBackwardStep = () => {
+    if (workflowStep === 'print') setWorkflowStep('crop');
+    else if (workflowStep === 'crop') setWorkflowStep('upload');
+  };
 
   // Print Setup
   const [sheetLayout, setSheetLayout] = useState<SheetLayout>('4x6');
@@ -138,33 +232,43 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
   const sourceImageRef = useRef<HTMLImageElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // DEFAULT PRESETS FOR POPULAR INDIAN CARDS
+  // DEFAULT PRESETS FOR POPULAR INDIAN CARDS (CR80 CALIBRATED)
   const applyCardPreset = (type: AutoCardType) => {
     setCardType(type);
+    let fBox: CropBox;
+    let bBox: CropBox;
+
     if (type === 'aadhaar') {
-      // Standard UIDAI e-Aadhaar A4 Letter (Bottom 28% of page has Front on Left, Back on Right)
-      setFrontCrop({ x: 4.8, y: 67.5, width: 43.8, height: 28.2 });
-      setBackCrop({ x: 51.4, y: 67.5, width: 43.8, height: 28.2 });
+      // Standard UIDAI e-Aadhaar A4 Letter (Bottom 28.5% of page has Front on Left, Back on Right)
+      fBox = { x: 3.8, y: 67.2, width: 44.5, height: 28.5 };
+      bBox = { x: 51.5, y: 67.2, width: 44.5, height: 28.5 };
     } else if (type === 'voter') {
       // Standard ECI Voter ID e-EPIC PDF (Middle/Bottom section)
-      setFrontCrop({ x: 4.5, y: 62.0, width: 44.0, height: 29.0 });
-      setBackCrop({ x: 51.5, y: 62.0, width: 44.0, height: 29.0 });
+      fBox = { x: 4.5, y: 61.5, width: 44.2, height: 29.0 };
+      bBox = { x: 51.2, y: 61.5, width: 44.2, height: 29.0 };
     } else if (type === 'ration') {
       // West Bengal Digital Ration Card A4 Slip
-      setFrontCrop({ x: 6.0, y: 55.0, width: 43.0, height: 28.0 });
-      setBackCrop({ x: 51.0, y: 55.0, width: 43.0, height: 28.0 });
+      fBox = { x: 5.2, y: 54.5, width: 43.8, height: 28.2 };
+      bBox = { x: 51.0, y: 54.5, width: 43.8, height: 28.2 };
     } else if (type === 'ayushman') {
       // PM-JAY / ABHA Golden Card A4 Slip
-      setFrontCrop({ x: 5.0, y: 58.0, width: 44.0, height: 28.5 });
-      setBackCrop({ x: 51.0, y: 58.0, width: 44.0, height: 28.5 });
+      fBox = { x: 5.0, y: 57.5, width: 44.0, height: 28.5 };
+      bBox = { x: 51.0, y: 57.5, width: 44.0, height: 28.5 };
     } else if (type === 'pan') {
       // NSDL / UTIITSL e-PAN A4 Letter
-      setFrontCrop({ x: 5.2, y: 69.0, width: 43.5, height: 27.5 });
-      setBackCrop({ x: 51.2, y: 69.0, width: 43.5, height: 27.5 });
+      fBox = { x: 5.0, y: 68.5, width: 44.0, height: 27.8 };
+      bBox = { x: 51.0, y: 68.5, width: 44.0, height: 27.8 };
     } else {
       // Custom Generic Dual Card
-      setFrontCrop({ x: 5.0, y: 20.0, width: 43.0, height: 28.0 });
-      setBackCrop({ x: 52.0, y: 20.0, width: 43.0, height: 28.0 });
+      fBox = { x: 5.0, y: 20.0, width: 43.0, height: 28.0 };
+      bBox = { x: 52.0, y: 20.0, width: 43.0, height: 28.0 };
+    }
+
+    setFrontCrop(fBox);
+    setBackCrop(bBox);
+    recordHistory(fBox, bBox, sourceRotation, type);
+    if (sourceImage) {
+      setWorkflowStep('crop');
     }
   };
 
@@ -495,16 +599,18 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
   const autoDetectAndApplyCardMap = (
     canvas: HTMLCanvasElement, 
     textContentStr: string = '',
-    preferredType?: AutoCardType
+    preferredType?: AutoCardType,
+    fileName?: string
   ): AutoDetectionResult => {
-    const lowerText = textContentStr.toLowerCase();
+    const lowerText = (textContentStr || '').toLowerCase();
+    const lowerFile = (fileName || '').toLowerCase();
     let detectedType: AutoCardType = preferredType || 'aadhaar';
     let detectedTitle = 'UIDAI e-Aadhaar Card';
     let detectedDetails = '';
     let confidence = 99.8;
     let detectionSource: AutoDetectionResult['source'] = textContentStr ? 'pdf_ai_text' : 'cv_edge_scanner';
 
-    // 1. TEXT HEURISTIC MATCHING
+    // 1. TEXT HEURISTIC MATCHING & FILE NAME MATCHING
     if (
       lowerText.includes('unique identification') ||
       lowerText.includes('aadhaar') ||
@@ -513,7 +619,11 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       lowerText.includes('1947') ||
       lowerText.includes('enrolment no') ||
       lowerText.includes('vid :') ||
-      lowerText.includes('vid:')
+      lowerText.includes('vid:') ||
+      lowerFile.includes('aadhaar') ||
+      lowerFile.includes('adhar') ||
+      lowerFile.includes('eaadhaar') ||
+      lowerFile.includes('uidai')
     ) {
       detectedType = 'aadhaar';
       detectedTitle = language === 'bn' ? 'UIDAI e-Aadhaar কার্ড (Auto-Detected)' : 'UIDAI e-Aadhaar Card (Auto-Detected)';
@@ -526,7 +636,11 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       lowerText.includes('epic no') ||
       lowerText.includes('elector') ||
       lowerText.includes('assembly constituency') ||
-      lowerText.includes('eci.gov.in')
+      lowerText.includes('eci.gov.in') ||
+      lowerFile.includes('voter') ||
+      lowerFile.includes('epic') ||
+      lowerFile.includes('e-epic') ||
+      lowerFile.includes('election')
     ) {
       detectedType = 'voter';
       detectedTitle = language === 'bn' ? 'ভারতের নির্বাচন কমিশন ই-এপিক (Voter ID)' : 'Election Commission e-EPIC Voter Card';
@@ -540,7 +654,11 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       lowerText.includes('wbpds') ||
       lowerText.includes('sphh') ||
       lowerText.includes('rksy') ||
-      lowerText.includes('aay')
+      lowerText.includes('aay') ||
+      lowerFile.includes('ration') ||
+      lowerFile.includes('khadya') ||
+      lowerFile.includes('wbpds') ||
+      lowerFile.includes('rc_')
     ) {
       detectedType = 'ration';
       detectedTitle = language === 'bn' ? 'ডিজিটাল রেশন কার্ড স্লিপ (WB PDS)' : 'Digital Ration Card Slip (WB PDS)';
@@ -552,7 +670,12 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       lowerText.includes('pm-jay') ||
       lowerText.includes('pmjay') ||
       lowerText.includes('national health authority') ||
-      lowerText.includes('abha')
+      lowerText.includes('abha') ||
+      lowerFile.includes('ayushman') ||
+      lowerFile.includes('pmjay') ||
+      lowerFile.includes('pm-jay') ||
+      lowerFile.includes('abha') ||
+      lowerFile.includes('golden')
     ) {
       detectedType = 'ayushman';
       detectedTitle = language === 'bn' ? 'আয়ুষ্মান ভারত / PM-JAY গোল্ডেন কার্ড' : 'Ayushman Bharat PM-JAY Golden Card';
@@ -564,7 +687,11 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       lowerText.includes('permanent account number') ||
       lowerText.includes('nsdl') ||
       lowerText.includes('utiitsl') ||
-      lowerText.includes('pan card')
+      lowerText.includes('pan card') ||
+      lowerFile.includes('pan') ||
+      lowerFile.includes('epan') ||
+      lowerFile.includes('nsdl') ||
+      lowerFile.includes('uti')
     ) {
       detectedType = 'pan';
       detectedTitle = language === 'bn' ? 'e-PAN কার্ড (Income Tax Dept)' : 'e-PAN Card (Income Tax Dept)';
@@ -583,21 +710,21 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
     let bBox: CropBox;
 
     if (detectedType === 'aadhaar') {
-      // Standard UIDAI A4 bottom 28%
-      fBox = { x: 4.8, y: 67.5, width: 43.8, height: 28.2 };
-      bBox = { x: 51.4, y: 67.5, width: 43.8, height: 28.2 };
+      // Standard UIDAI A4 bottom 28.5%
+      fBox = { x: 3.8, y: 67.2, width: 44.5, height: 28.5 };
+      bBox = { x: 51.5, y: 67.2, width: 44.5, height: 28.5 };
     } else if (detectedType === 'voter') {
-      fBox = { x: 4.5, y: 62.0, width: 44.0, height: 29.0 };
-      bBox = { x: 51.5, y: 62.0, width: 44.0, height: 29.0 };
+      fBox = { x: 4.5, y: 61.5, width: 44.2, height: 29.0 };
+      bBox = { x: 51.2, y: 61.5, width: 44.2, height: 29.0 };
     } else if (detectedType === 'ration') {
-      fBox = { x: 6.0, y: 55.0, width: 43.0, height: 28.0 };
-      bBox = { x: 51.0, y: 55.0, width: 43.0, height: 28.0 };
+      fBox = { x: 5.2, y: 54.5, width: 43.8, height: 28.2 };
+      bBox = { x: 51.0, y: 54.5, width: 43.8, height: 28.2 };
     } else if (detectedType === 'ayushman') {
-      fBox = { x: 5.0, y: 58.0, width: 44.0, height: 28.5 };
-      bBox = { x: 51.0, y: 58.0, width: 44.0, height: 28.5 };
+      fBox = { x: 5.0, y: 57.5, width: 44.0, height: 28.5 };
+      bBox = { x: 51.0, y: 57.5, width: 44.0, height: 28.5 };
     } else if (detectedType === 'pan') {
-      fBox = { x: 5.2, y: 69.0, width: 43.5, height: 27.5 };
-      bBox = { x: 51.2, y: 69.0, width: 43.5, height: 27.5 };
+      fBox = { x: 5.0, y: 68.5, width: 44.0, height: 27.8 };
+      bBox = { x: 51.0, y: 68.5, width: 44.0, height: 27.8 };
     } else {
       fBox = { x: 5.0, y: 20.0, width: 43.0, height: 28.0 };
       bBox = { x: 52.0, y: 20.0, width: 43.0, height: 28.0 };
@@ -628,7 +755,7 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
             prevLum += strip.data[prevIdx] * 0.299 + strip.data[prevIdx + 1] * 0.587 + strip.data[prevIdx + 2] * 0.114;
           }
           const diff = Math.abs(currLum - prevLum);
-          if (diff > maxGradient && diff > 1200) {
+          if (diff > maxGradient && diff > 1500) {
             maxGradient = diff;
             maxContrastY = scanStartY + r;
           }
@@ -638,9 +765,12 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
           const detectedY = (maxContrastY / h) * 100;
           if (detectedY >= 52 && detectedY <= 75) {
             const fineY = Math.round(detectedY * 10) / 10;
-            fBox.y = fineY;
-            bBox.y = fineY;
-            confidence = 99.9;
+            // Only adopt fineY if within 5% of calibrated baseline
+            if (Math.abs(fineY - fBox.y) <= 5.0) {
+              fBox.y = fineY;
+              bBox.y = fineY;
+              confidence = 99.9;
+            }
           }
         }
       }
@@ -652,6 +782,7 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
     setCardType(detectedType);
     setFrontCrop(fBox);
     setBackCrop(bBox);
+    recordHistory(fBox, bBox, sourceRotation, detectedType);
 
     const result: AutoDetectionResult = {
       detectedType,
@@ -672,21 +803,23 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
   const renderPdfBuffer = async (
     arrayBuffer: ArrayBuffer, 
     password?: string, 
-    pageNumber: number = 1
+    pageNumber: number = 1,
+    detectedFileName?: string
   ) => {
     setIsPdfLoading(true);
     setIsAutoDetecting(true);
     setPdfPasswordError(null);
 
     try {
-      const pdfjs = await import('pdfjs-dist');
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+      const pdfjs = await initPdfJs();
 
       // Copy buffer to avoid transfer detachment issues
       const bufferCopy = arrayBuffer.slice(0);
       const loadingTask = pdfjs.getDocument({
         data: bufferCopy,
         password: password || undefined,
+        cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/cmaps/`,
+        cMapPacked: true,
       });
 
       const pdf = await loadingTask.promise;
@@ -703,7 +836,7 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       try {
         const textContent = await page.getTextContent();
         fullTextStr = textContent.items
-          .map((item: any) => item.str || '')
+          .map((item: any) => (item as any)?.str || '')
           .join(' ');
       } catch (textErr) {
         console.warn('Text extraction fallback:', textErr);
@@ -723,7 +856,8 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
         setPdfPasswordError(null);
 
         // AUTOMATICALLY MAP & CROP FRONT AND BACK
-        autoDetectAndApplyCardMap(canvas, fullTextStr);
+        autoDetectAndApplyCardMap(canvas, fullTextStr, undefined, detectedFileName || sourceFileName);
+        setWorkflowStep('crop');
       }
     } catch (err: any) {
       console.error('PDF render error:', err);
@@ -751,13 +885,60 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       } else {
         alert(
           language === 'bn'
-            ? 'PDF খুলতে সমস্যা হয়েছে। অনুগ্রহ করে স্ক্যান করা JPG/PNG ছবি আপলোড করুন।'
-            : 'Could not open PDF. Please upload a scanned JPG/PNG image.'
+            ? 'PDF খুলতে সমস্যা হয়েছে (এনক্রিপ্টশন বা নিরাপত্তা বিধিনিষেধ)। আপনি নিচে থেকে নির্দিষ্ট কার্ড পছন্দ করে সরাসরি তৈরি করতে পারেন অথবা JPG/PNG ছবি আপলোড করতে পারেন।'
+            : 'Could not open PDF due to file format or encryption restrictions. You can choose the card preset below or upload a JPG/PNG scan.'
         );
       }
     } finally {
       setIsPdfLoading(false);
       setIsAutoDetecting(false);
+    }
+  };
+
+  // 2-PAGE PDF AUTOMATIC SPLIT (Page 1 = Front, Page 2 = Back)
+  const handleAutoSplitTwoPagePdf = async () => {
+    if (!pendingPdfBuffer || pdfPageCount < 2) return;
+    setIsPdfLoading(true);
+    try {
+      const pdfjs = await initPdfJs();
+      const pdf = await pdfjs.getDocument({
+        data: pendingPdfBuffer.slice(0),
+        password: pdfPassword || undefined,
+        cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/cmaps/`,
+        cMapPacked: true,
+      }).promise;
+
+      // Page 1 -> Front
+      const p1 = await pdf.getPage(1);
+      const v1 = p1.getViewport({ scale: 2.5 });
+      const c1 = document.createElement('canvas');
+      c1.width = v1.width;
+      c1.height = v1.height;
+      const ctx1 = c1.getContext('2d');
+      if (ctx1) {
+        await (p1.render({ canvasContext: ctx1, viewport: v1, canvas: c1 } as any)).promise;
+        setSeparateFront(c1.toDataURL('image/png'));
+      }
+
+      // Page 2 -> Back
+      const p2 = await pdf.getPage(2);
+      const v2 = p2.getViewport({ scale: 2.5 });
+      const c2 = document.createElement('canvas');
+      c2.width = v2.width;
+      c2.height = v2.height;
+      const ctx2 = c2.getContext('2d');
+      if (ctx2) {
+        await (p2.render({ canvasContext: ctx2, viewport: v2, canvas: c2 } as any)).promise;
+        setSeparateBack(c2.toDataURL('image/png'));
+      }
+
+      setUploadMode('separate_front_back');
+      setWorkflowStep('crop');
+    } catch (e) {
+      console.error('2-Page PDF split error:', e);
+      alert(language === 'bn' ? '২-পেজ স্প্লিট করতে সমস্যা হয়েছে।' : 'Error splitting 2-page PDF.');
+    } finally {
+      setIsPdfLoading(false);
     }
   };
 
@@ -772,7 +953,7 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       try {
         const arrayBuffer = await file.arrayBuffer();
         setPendingPdfBuffer(arrayBuffer);
-        await renderPdfBuffer(arrayBuffer, undefined, 1);
+        await renderPdfBuffer(arrayBuffer, undefined, 1, file.name);
       } catch (err) {
         console.error('File read error:', err);
       }
@@ -796,7 +977,8 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
           const cvCtx = cvCanvas.getContext('2d');
           if (cvCtx) {
             cvCtx.drawImage(img, 0, 0);
-            autoDetectAndApplyCardMap(cvCanvas, '', cardType);
+            autoDetectAndApplyCardMap(cvCanvas, '', cardType, file.name);
+            setWorkflowStep('crop');
           }
         };
         img.src = dataUrl;
@@ -814,13 +996,13 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       );
       return;
     }
-    renderPdfBuffer(pendingPdfBuffer, pdfPassword.trim(), selectedPdfPage || 1);
+    renderPdfBuffer(pendingPdfBuffer, pdfPassword.trim(), selectedPdfPage || 1, sourceFileName);
   };
 
   // HANDLE PDF PAGE SWITCH
   const handleSwitchPdfPage = (newPage: number) => {
     if (pendingPdfBuffer && newPage >= 1 && newPage <= pdfPageCount) {
-      renderPdfBuffer(pendingPdfBuffer, pdfPassword || undefined, newPage);
+      renderPdfBuffer(pendingPdfBuffer, pdfPassword || undefined, newPage, sourceFileName);
     }
   };
 
@@ -834,13 +1016,16 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
         setSeparateBack(event.target?.result as string);
       }
       setUploadMode('separate_front_back');
+      setWorkflowStep('crop');
     };
     reader.readAsDataURL(file);
   };
 
   // ROTATE SCAN
   const rotateScan = () => {
-    setSourceRotation((prev) => (prev + 90) % 360);
+    const newRot = (sourceRotation + 90) % 360;
+    setSourceRotation(newRot);
+    recordHistory(frontCrop, backCrop, newRot, cardType);
   };
 
   // SWAP FRONT & BACK CROPS
@@ -848,6 +1033,7 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
     const temp = { ...frontCrop };
     setFrontCrop({ ...backCrop });
     setBackCrop(temp);
+    recordHistory(backCrop, temp, sourceRotation, cardType);
   };
 
   // NUDGE / FINE-TUNE MICRO MOVEMENTS
@@ -862,12 +1048,18 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       return { ...box, x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 };
     };
 
+    let nextFront = frontCrop;
+    let nextBack = backCrop;
+
     if (nudgeTarget === 'front' || nudgeTarget === 'both') {
-      setFrontCrop(prev => applyNudge(prev));
+      nextFront = applyNudge(frontCrop);
+      setFrontCrop(nextFront);
     }
     if (nudgeTarget === 'back' || nudgeTarget === 'both') {
-      setBackCrop(prev => applyNudge(prev));
+      nextBack = applyNudge(backCrop);
+      setBackCrop(nextBack);
     }
+    recordHistory(nextFront, nextBack, sourceRotation, cardType);
   };
 
   // SCALE / ZOOM CROPPED CARD SIZES (PRESERVING CR80 RATIO)
@@ -882,12 +1074,18 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       };
     };
 
+    let nextFront = frontCrop;
+    let nextBack = backCrop;
+
     if (nudgeTarget === 'front' || nudgeTarget === 'both') {
-      setFrontCrop(prev => applyScale(prev));
+      nextFront = applyScale(frontCrop);
+      setFrontCrop(nextFront);
     }
     if (nudgeTarget === 'back' || nudgeTarget === 'both') {
-      setBackCrop(prev => applyScale(prev));
+      nextBack = applyScale(backCrop);
+      setBackCrop(nextBack);
     }
+    recordHistory(nextFront, nextBack, sourceRotation, cardType);
   };
 
   // RE-RUN AUTO-DETECT
@@ -1286,6 +1484,18 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
       {/* Top Banner */}
       <div className="bg-linear-to-r from-emerald-950 via-teal-950 to-slate-950 text-white p-5 rounded-3xl border border-emerald-800/60 shadow-lg flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
+          {onBack && (
+            <button
+              type="button"
+              id="btn-autocard-top-back"
+              onClick={onBack}
+              className="px-3.5 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 text-white transition flex items-center gap-2 font-bold text-xs sm:text-sm cursor-pointer shadow-sm active:scale-95"
+              title={language === 'bn' ? 'হোমে ফিরে যান' : 'Back to Home'}
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-300" />
+              <span>{language === 'bn' ? '⬅ ফিরে যান (Back)' : '⬅ Back'}</span>
+            </button>
+          )}
           <div className="p-3 bg-emerald-600/30 border border-emerald-400/40 rounded-2xl">
             <Scissors className="w-6 h-6 text-emerald-300" />
           </div>
@@ -1527,12 +1737,105 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
         </div>
       </div>
 
+      {/* Workflow Navigation Bar with Forward and Backward Buttons */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Backward / Back Button */}
+          <button
+            type="button"
+            onClick={handleGoBackwardStep}
+            disabled={workflowStep === 'upload'}
+            className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-400 font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            id="btn-workflow-backward"
+            title="Go Back to previous step"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>{language === 'bn' ? '⬅ পিছনের ধাপ (Back)' : '⬅ Back'}</span>
+          </button>
+
+          {/* Workflow Step Indicators */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setWorkflowStep('upload')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                workflowStep === 'upload'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>1. {language === 'bn' ? 'আপলোড' : 'Upload'}</span>
+            </button>
+
+            <span className="text-slate-400 text-xs">➔</span>
+
+            <button
+              type="button"
+              onClick={() => setWorkflowStep('crop')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                workflowStep === 'crop'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Crop className="w-3.5 h-3.5" />
+              <span>2. {language === 'bn' ? 'অটো ক্রপ ও মাপ' : 'Auto Crop'}</span>
+            </button>
+
+            <span className="text-slate-400 text-xs">➔</span>
+
+            <button
+              type="button"
+              onClick={() => setWorkflowStep('print')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                workflowStep === 'print'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>3. {language === 'bn' ? 'প্রিন্ট শিট' : 'Print Sheet'}</span>
+            </button>
+          </div>
+
+          {/* Forward Button */}
+          <button
+            type="button"
+            onClick={handleGoForwardStep}
+            disabled={workflowStep === 'print'}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold text-xs text-white flex items-center gap-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+            id="btn-workflow-forward"
+          >
+            <span>{language === 'bn' ? 'পরবর্তী ধাপ (Forward) ➔' : 'Forward ➔'}</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* View Toggle (Side-by-side or Wizard) */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setLayoutMode(layoutMode === 'step_wizard' ? 'side_by_side' : 'step_wizard')}
+            className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition flex items-center gap-1.5"
+          >
+            <Layers className="w-3.5 h-3.5 text-emerald-600" />
+            <span>
+              {layoutMode === 'step_wizard' 
+                ? (language === 'bn' ? 'সম্পূর্ণ ভিউ (Side-by-Side)' : 'Side-by-Side View')
+                : (language === 'bn' ? 'ধাপ অনুযায়ী ভিউ (Guided)' : 'Guided Step View')
+              }
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Grid: Crop Workspace (Left 6 cols) + Print Ready Sheet (Right 6 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Upload and Interactive Cropper */}
-        <div className="lg:col-span-6 space-y-5">
+        <div className={`${layoutMode === 'side_by_side' || workflowStep !== 'print' ? 'lg:col-span-6' : 'hidden'} space-y-5`}>
           {/* Upload Controls Box */}
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
+          <div className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4 ${layoutMode === 'step_wizard' && workflowStep !== 'upload' ? 'hidden' : ''}`}>
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                 <Upload className="w-4 h-4 text-emerald-600" />
@@ -1645,42 +1948,71 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
 
             {/* PDF Multi-Page Selector & Password Control */}
             {pendingPdfBuffer && (
-              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-900/60 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-300 dark:border-emerald-800/80 shadow-2xs text-xs">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-emerald-600" />
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    PDF {language === 'bn' ? 'পৃষ্ঠা:' : 'Page:'} {selectedPdfPage} / {pdfPageCount}
-                  </span>
+                  <div className="p-1.5 bg-emerald-600 text-white rounded-lg">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                      PDF {language === 'bn' ? 'পৃষ্ঠা ব্রাউজ ও নির্বাচন:' : 'Page Navigation:'}
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      Page {selectedPdfPage} of {pdfPageCount}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   {pdfPageCount > 1 && (
                     <>
+                      {/* Explicit Backward Button */}
                       <button
                         type="button"
+                        id="btn-pdf-page-backward"
                         disabled={selectedPdfPage <= 1 || isPdfLoading}
                         onClick={() => handleSwitchPdfPage(selectedPdfPage - 1)}
-                        className="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold hover:bg-emerald-50 text-slate-800 dark:text-slate-200 disabled:opacity-35 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                        title="Go Backward to previous page"
                       >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                        <span>{language === 'bn' ? 'পূর্বের' : 'Prev'}</span>
+                        <ChevronLeft className="w-4 h-4 text-emerald-600" />
+                        <span>{language === 'bn' ? '⬅ Backward (আগের পৃষ্ঠা)' : '⬅ Backward'}</span>
                       </button>
+
+                      {/* Explicit Forward Button */}
                       <button
                         type="button"
+                        id="btn-pdf-page-forward"
                         disabled={selectedPdfPage >= pdfPageCount || isPdfLoading}
                         onClick={() => handleSwitchPdfPage(selectedPdfPage + 1)}
-                        className="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-xl border border-emerald-400 dark:border-emerald-700 bg-emerald-600 hover:bg-emerald-700 font-bold text-white disabled:opacity-35 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                        title="Go Forward to next page"
                       >
-                        <span>{language === 'bn' ? 'পরের' : 'Next'}</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
+                        <span>{language === 'bn' ? 'Forward (পরের পৃষ্ঠা) ➔' : 'Forward ➔'}</span>
+                        <ChevronRight className="w-4 h-4 text-white" />
                       </button>
+
+                      {/* 2-Page PDF Auto Split for Voter/Ration */}
+                      {pdfPageCount === 2 && (
+                        <button
+                          type="button"
+                          id="btn-pdf-auto-split"
+                          onClick={handleAutoSplitTwoPagePdf}
+                          disabled={isPdfLoading}
+                          className="px-2.5 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-teal-100 border border-teal-600 font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                          title="Page 1 = Front, Page 2 = Back automatically"
+                        >
+                          <Split className="w-3.5 h-3.5" />
+                          <span>{language === 'bn' ? '২-পেজ অটো ফ্রন্ট/ব্যাক' : 'Auto 2-Page Split'}</span>
+                        </button>
+                      )}
                     </>
                   )}
 
                   <button
                     type="button"
                     onClick={() => setShowPasswordModal(true)}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1 transition cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-emerald-600 hover:text-white text-slate-800 dark:text-slate-200 font-bold flex items-center gap-1 transition cursor-pointer"
                   >
                     <Key className="w-3.5 h-3.5" />
                     <span>{language === 'bn' ? 'পাসওয়ার্ড' : 'Password'}</span>
@@ -1699,14 +2031,40 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
 
           {/* Interactive Document Scan & Auto-Crop Visualizer */}
           {uploadMode === 'single_full_scan' && sourceImage && (
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
+            <div className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4 ${layoutMode === 'step_wizard' && workflowStep === 'upload' ? 'hidden' : ''}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                   <Crop className="w-4 h-4 text-emerald-600" />
                   {language === 'bn' ? 'অটো ক্রপ সিলেকশন বক্স' : 'Auto-Crop Position & Alignment'}
                 </h3>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {/* Backward / Undo Button */}
+                  <button
+                    type="button"
+                    id="btn-crop-history-backward"
+                    disabled={cropHistoryIndex <= 0}
+                    onClick={handleBackwardUndo}
+                    className="px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    title="Backward / Undo previous crop movement"
+                  >
+                    <Undo2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{language === 'bn' ? 'Backward' : 'Undo'}</span>
+                  </button>
+
+                  {/* Forward / Redo Button */}
+                  <button
+                    type="button"
+                    id="btn-crop-history-forward"
+                    disabled={cropHistoryIndex >= cropHistory.length - 1}
+                    onClick={handleForwardRedo}
+                    className="px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    title="Forward / Redo crop movement"
+                  >
+                    <span>{language === 'bn' ? 'Forward' : 'Redo'}</span>
+                    <Redo2 className="w-3.5 h-3.5 text-emerald-600" />
+                  </button>
+
                   <button
                     type="button"
                     onClick={rotateScan}
@@ -1735,6 +2093,17 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Reset Crop</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    id="btn-crop-back-to-upload"
+                    onClick={() => setWorkflowStep('upload')}
+                    className="p-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center gap-1 cursor-pointer transition"
+                    title={language === 'bn' ? 'আপলোড পেজে ফিরে যান' : 'Back to Upload'}
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{language === 'bn' ? 'ফিরে যান (Back)' : 'Back'}</span>
                   </button>
                 </div>
               </div>
@@ -2051,11 +2420,22 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
                 />
               </div>
             </div>
+
+            {/* Step 2 to Step 3 Forward Action Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setWorkflowStep('print')}
+                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+              >
+                <span>{language === 'bn' ? 'সঠিক মাপে কার্ড লক হয়েছে! পরবর্তী ধাপে প্রিন্ট শিট দেখুন (Forward) ➔' : 'Card Locked to CR80! Proceed to Print Sheet (Forward) ➔'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Right Column: Print Ready Master Sheet & Quick Actions (6 cols) */}
-        <div className="lg:col-span-6 space-y-5">
+        <div className={`${layoutMode === 'side_by_side' || workflowStep === 'print' ? 'lg:col-span-6' : 'hidden'} space-y-5`}>
           {/* Print Layout Config */}
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
@@ -2161,6 +2541,20 @@ export const AutoCardCropSizerTool: React.FC<{ language: Language }> = ({ langua
                   <span className="text-[10px] font-bold text-slate-500 block mb-1">BACK PREVIEW</span>
                   <img src={backCroppedUrl} alt="Back Cropped" className="w-full h-auto rounded border border-slate-300 dark:border-slate-600 shadow-xs" />
                 </div>
+              </div>
+            )}
+
+            {/* Step Navigation Back Button */}
+            {layoutMode === 'step_wizard' && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setWorkflowStep('crop')}
+                  className="w-full py-2 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4 text-emerald-600" />
+                  <span>{language === 'bn' ? '⬅ ক্রপ ও পজিশন সমন্বয় করতে পিছনে যান (Backward to Crop)' : '⬅ Backward to Adjust Crop & Position'}</span>
+                </button>
               </div>
             )}
 

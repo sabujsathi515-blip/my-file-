@@ -100,14 +100,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onImportBackup
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [userIdInput, setUserIdInput] = useState<string>('');
+  const [userIdInput, setUserIdInput] = useState<string>('Digital Seva');
   const [pinInput, setPinInput] = useState<string>('');
   const [showPinText, setShowPinText] = useState<boolean>(false);
   const [pinError, setPinError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'services' | 'prices' | 'notices' | 'jobs' | 'forms' | 'security' | 'backup'>('services');
 
-  // Stored Admin Credentials (Default: User ID: Milton12, Password: 909311)
-  const [currentAdminUserId, setCurrentAdminUserId] = useState<string>('Milton12');
+  // Stored Admin Credentials (Default: User ID: Digital Seva, Password: 909311)
+  const [currentAdminUserId, setCurrentAdminUserId] = useState<string>('Digital Seva');
   const [currentAdminPassword, setCurrentAdminPassword] = useState<string>('909311');
   const [newUserIdInput, setNewUserIdInput] = useState<string>('');
   const [newPasswordInput, setNewPasswordInput] = useState<string>('');
@@ -184,24 +184,36 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   } | null>(null);
 
   useEffect(() => {
-    const savedUserId = localStorage.getItem('cyber_cafe_admin_userid') || 'Milton12';
+    const storedUserId = localStorage.getItem('cyber_cafe_admin_userid');
+    // Migrate previous 'Milton12' or uninitialized value to 'Digital Seva'
+    const savedUserId = (!storedUserId || storedUserId === 'Milton12') ? 'Digital Seva' : storedUserId;
     const savedPin = localStorage.getItem('cyber_cafe_admin_pin') || '909311';
     setCurrentAdminUserId(savedUserId);
     setCurrentAdminPassword(savedPin);
-  }, []);
+    // Auto-fill login ID with 'Digital Seva'
+    setUserIdInput(savedUserId);
+    // Password must be entered manually and remain hidden
+    setPinInput('');
+    setShowPinText(false);
+    setPinError('');
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const effectiveUserId = (currentAdminUserId || 'Milton12').trim().toLowerCase();
+    const effectiveUserId = (currentAdminUserId || 'Digital Seva').trim().toLowerCase();
     const effectivePin = (currentAdminPassword || '909311').trim();
     
     const inputUser = userIdInput.trim().toLowerCase();
     const inputPin = pinInput.trim();
 
-    // Support both the active credentials and default failsafe (Milton12 / 909311)
-    const isUserValid = inputUser === effectiveUserId || inputUser === 'milton12';
+    // Support both active credentials and default failsafes ('Digital Seva' / 909311)
+    const isUserValid = 
+      inputUser === effectiveUserId || 
+      inputUser === 'digital seva' || 
+      inputUser === 'digitalseva' ||
+      inputUser === 'milton12';
     const isPassValid = inputPin === effectivePin || inputPin === '909311';
 
     if (isUserValid && isPassValid) {
@@ -218,20 +230,22 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    setUserIdInput('');
+    setUserIdInput(currentAdminUserId || 'Digital Seva');
     setPinInput('');
+    setShowPinText(false);
     setPinError('');
   };
 
   const handleUpdateCredentials = (e: React.FormEvent) => {
     e.preventDefault();
-    const targetUserId = newUserIdInput.trim() || currentAdminUserId || 'Milton12';
+    const targetUserId = newUserIdInput.trim() || currentAdminUserId || 'Digital Seva';
     const targetPassword = newPasswordInput.trim() || currentAdminPassword || '909311';
 
     localStorage.setItem('cyber_cafe_admin_userid', targetUserId);
     localStorage.setItem('cyber_cafe_admin_pin', targetPassword);
     setCurrentAdminUserId(targetUserId);
     setCurrentAdminPassword(targetPassword);
+    setUserIdInput(targetUserId);
     setNewUserIdInput('');
     setNewPasswordInput('');
     setPasswordSuccessMsg(
@@ -243,14 +257,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleResetPassword = () => {
-    localStorage.setItem('cyber_cafe_admin_userid', 'Milton12');
+    localStorage.setItem('cyber_cafe_admin_userid', 'Digital Seva');
     localStorage.setItem('cyber_cafe_admin_pin', '909311');
-    setCurrentAdminUserId('Milton12');
+    setCurrentAdminUserId('Digital Seva');
     setCurrentAdminPassword('909311');
+    setUserIdInput('Digital Seva');
+    setPinInput('');
     setPasswordSuccessMsg(
       language === 'bn' 
-        ? 'ইউজার আইডি Milton12 এবং পাসওয়ার্ড 909311 রিসেট হয়েছে।' 
-        : 'Credentials reset to default (User ID: Milton12, Password: 909311).'
+        ? 'ইউজার আইডি Digital Seva এবং পাসওয়ার্ড 909311 রিসেট হয়েছে।' 
+        : 'Credentials reset to default (User ID: Digital Seva, Password: 909311).'
     );
     setTimeout(() => setPasswordSuccessMsg(''), 4000);
   };
@@ -502,7 +518,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 {isAuthenticated && (
                   <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                     <UserCheck className="w-3 h-3" />
-                    <span>{currentAdminUserId || 'Milton12'}</span>
+                    <span>{currentAdminUserId || 'Digital Seva'}</span>
                   </span>
                 )}
               </div>
@@ -552,31 +568,41 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </p>
             </div>
 
-            <form onSubmit={handleLogin} className="w-full space-y-3 text-left">
-              {/* User ID Field */}
+            <form onSubmit={handleLogin} className="w-full space-y-3.5 text-left">
+              {/* User ID Field - Auto-filled with Digital Seva */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {language === 'bn' ? 'ইউজার আইডি (User ID) *' : 'User ID *'}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {language === 'bn' ? 'ইউজার আইডি (Login ID) *' : 'Login ID *'}
+                  </label>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded-md">
+                    <CheckCircle2 className="w-2.5 h-2.5" />
+                    {language === 'bn' ? 'অটো-ফিল্ড' : 'Auto-filled'}
+                  </span>
+                </div>
                 <div className="relative">
-                  <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400" />
                   <input
                     type="text"
                     required
                     value={userIdInput}
                     onChange={(e) => setUserIdInput(e.target.value)}
-                    placeholder={language === 'bn' ? 'ইউজার আইডি লিখুন' : 'Enter User ID'}
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-medium"
-                    autoFocus
+                    placeholder="Digital Seva"
+                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-semibold text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
 
-              {/* Password Field */}
+              {/* Password Field - Hidden, Manual Fill Required */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {language === 'bn' ? 'পাসওয়ার্ড (Password) *' : 'Password *'}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {language === 'bn' ? 'পাসওয়ার্ড (Password) *' : 'Password *'}
+                  </label>
+                  <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded-md">
+                    {language === 'bn' ? 'ম্যানুয়াল ফিল করুন (গোপন)' : 'Manual fill required'}
+                  </span>
+                </div>
                 <div className="relative">
                   <Key className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -584,17 +610,26 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     required
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
-                    placeholder={language === 'bn' ? 'পাসওয়ার্ড দিন' : 'Enter Password'}
-                    className="w-full pl-9 pr-10 py-2.5 text-sm font-mono bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    placeholder={language === 'bn' ? 'পাসওয়ার্ড লিখুন' : 'Enter Password'}
+                    className="w-full pl-9 pr-10 py-2.5 text-sm font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 tracking-wider text-slate-900 dark:text-white"
+                    autoFocus
                   />
                   <button
                     type="button"
                     onClick={() => setShowPinText(!showPinText)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
-                    title={showPinText ? 'Hide' : 'Show'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer transition"
+                    title={showPinText ? (language === 'bn' ? 'পাসওয়ার্ড লুকান' : 'Hide password') : (language === 'bn' ? 'পাসওয়ার্ড দেখুন' : 'Show password')}
                   >
                     {showPinText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <span>
+                    {language === 'bn' ? 'পাসওয়ার্ড টাইপ করুন' : 'Type password manually'}
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-400">
+                    (Password: 909311)
+                  </span>
                 </div>
               </div>
 
@@ -1561,7 +1596,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                           <span className="text-slate-500">ID:</span>
                           <span className="font-mono font-bold text-blue-800 dark:text-blue-300">
-                            {currentAdminUserId || 'Milton12'}
+                            {currentAdminUserId || 'Digital Seva'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-3 py-1.5 rounded-xl text-xs">

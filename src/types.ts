@@ -65,6 +65,12 @@ export interface JobItem {
   officialNotificationUrl: string;
   applyUrl: string;
   status: 'active' | 'expiring_soon' | 'closed';
+  organization?: string;
+  qualification?: string;
+  ageLimit?: string;
+  salary?: string;
+  notificationUrl?: string;
+  isDirectConnect?: boolean;
 }
 
 export interface FormItem {

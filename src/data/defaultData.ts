@@ -426,6 +426,21 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     safetyBadge: 'verified_gov'
   },
   {
+    id: 'wb-job-search',
+    nameEn: 'Job Search',
+    nameBn: 'জব সার্চ (FreeJobAlert)',
+    category: 'jobs',
+    subcategory: 'Jobs & Recruitment',
+    descriptionEn: 'Instant direct search for all West Bengal & Central government jobs, police recruitment, admit cards, and application forms on FreeJobAlert.',
+    descriptionBn: 'পশ্চিমবঙ্গ ও সারা ভারতের সমস্ত সরকারি চাকরির খবর, পুলিশ ও ডিফেন্স নিয়োগ, অ্যাডমিট কার্ড ও রেজাল্ট সরাসরি খুঁজুন।',
+    officialUrl: 'https://www.freejobalert.com/',
+    iconName: 'Search',
+    isPopular: true,
+    isWbGov: true,
+    tags: ['job search', 'freejobalert', 'wb jobs', 'recruitment', 'police', 'ssc', 'railway', '2026'],
+    safetyBadge: 'verified_gov'
+  },
+  {
     id: 'wb-transport-vahan',
     nameEn: 'WB Transport Department Services',
     nameBn: 'পরিবহন দপ্তর পশ্চিমবঙ্গ (Vehicle Services)',
@@ -835,6 +850,22 @@ export const INITIAL_NOTICES: NoticeItem[] = [
 ];
 
 export const INITIAL_JOBS: JobItem[] = [
+  {
+    id: 'job-search',
+    titleEn: 'Job Search (FreeJobAlert)',
+    titleBn: 'জব সার্চ (FreeJobAlert - চাকরি সন্ধান)',
+    departmentEn: 'FreeJobAlert All India Portal',
+    departmentBn: 'ফ্রি জব অ্যালার্ট পোর্টাল (ভারত ও পশ্চিমবঙ্গ)',
+    totalPosts: 'All Current Vacancies',
+    qualificationEn: 'All Pass (8th, 10th, 12th, ITI, Diploma, Graduate)',
+    qualificationBn: 'সমস্ত শিক্ষাগত যোগ্যতা (৮ম, ১০ম, ১২ম, স্নাতক, ডিপ্লোমা)',
+    lastDate: 'Daily Live Updates',
+    category: 'wb',
+    officialNotificationUrl: 'https://www.freejobalert.com/',
+    applyUrl: 'https://www.freejobalert.com/',
+    status: 'active',
+    isDirectConnect: true
+  },
   {
     id: 'job-1',
     titleEn: 'West Bengal Police Constable & Lady Constable 2026',

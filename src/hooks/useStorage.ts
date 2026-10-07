@@ -20,7 +20,7 @@ import {
   INITIAL_PRICES 
 } from '../data/defaultData';
 
-const DATA_VERSION = '2026.3';
+const DATA_VERSION = '2026.4';
 
 export function useStorage() {
   const [language, setLanguage] = useState<Language>(() => {
@@ -83,7 +83,20 @@ export function useStorage() {
   const [jobs, setJobs] = useState<JobItem[]>(() => {
     const saved = localStorage.getItem('dsp_jobs');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          if (!parsed.some((j: JobItem) => j.id === 'job-search')) {
+            const jobSearchItem = INITIAL_JOBS.find(j => j.id === 'job-search');
+            if (jobSearchItem) {
+              return [jobSearchItem, ...parsed];
+            }
+          }
+          return parsed;
+        }
+      } catch (e) {
+        console.error(e);
+      }
     }
     return INITIAL_JOBS;
   });

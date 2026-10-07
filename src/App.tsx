@@ -63,7 +63,8 @@ import {
   ArrowRight, 
   ArrowLeft,
   CheckCircle2, 
-  ExternalLink 
+  ExternalLink,
+  Search
 } from 'lucide-react';
 
 export function App() {
@@ -132,6 +133,10 @@ export function App() {
 
   const handleOpenService = (service: ServiceItem) => {
     trackRecent(service.id);
+    if (service.id === 'wb-job-search' || service.officialUrl.includes('freejobalert.com')) {
+      window.open(service.officialUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
     setSafetyModalService(service);
   };
 
@@ -373,14 +378,27 @@ export function App() {
                         : 'Explore active job vacancies, eligibility criteria, and direct official application forms.'}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => { setActiveTab('jobs'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    className="py-3 px-6 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition active:scale-95 shrink-0"
-                  >
-                    <span>{language === 'bn' ? 'চাকরির তালিকা দেখুন' : 'Explore All Jobs'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-center gap-2.5 shrink-0 w-full sm:w-auto">
+                    <a
+                      href="https://www.freejobalert.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
+                      title="Direct Connect to FreeJobAlert"
+                    >
+                      <Search className="w-4 h-4" />
+                      <span>{language === 'bn' ? 'Job Search (সরাসরি যুক্ত হন)' : 'Job Search (FreeJobAlert)'}</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab('jobs'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="w-full sm:w-auto py-3 px-5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition active:scale-95"
+                    >
+                      <span>{language === 'bn' ? 'চাকরির তালিকা দেখুন' : 'Explore All Jobs'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

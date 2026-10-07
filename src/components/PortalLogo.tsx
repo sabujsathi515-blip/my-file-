@@ -453,7 +453,21 @@ export const PortalLogo: React.FC<PortalLogoProps> = ({
           </svg>
         );
 
-      // 30. WB Transport Department
+      // 30. Job Search (FreeJobAlert)
+      case 'wb-job-search':
+        return (
+          <svg viewBox="0 0 64 64" className="w-full h-full p-1" fill="none">
+            <rect width="64" height="64" rx="14" fill="#047857" />
+            {/* Search Magnifying Glass + Briefcase Motif */}
+            <circle cx="28" cy="26" r="12" stroke="#ffffff" strokeWidth="3.5" fill="none" />
+            <path d="M37 35L48 46" stroke="#fde047" strokeWidth="4.5" strokeLinecap="round" />
+            <rect x="22" y="22" width="12" height="8" rx="2" fill="#fde047" />
+            <path d="M25 22V20C25 18.5 26.5 17 28 17H28C29.5 17 31 18.5 31 20V22" stroke="#fde047" strokeWidth="2" />
+            <text x="32" y="58" textAnchor="middle" fill="#ffffff" fontSize="7" fontWeight="900" fontFamily="sans-serif">FREEJOBALERT</text>
+          </svg>
+        );
+
+      // 31. WB Transport Department
       case 'wb-transport-vahan':
         return (
           <svg viewBox="0 0 64 64" className="w-full h-full p-1" fill="none">

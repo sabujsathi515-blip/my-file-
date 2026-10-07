@@ -508,7 +508,24 @@ export const WB_SERVICE_THEMES: Record<string, ServiceCardTheme> = {
     brandTag: 'WBBPE প্রাইমারি টেট'
   },
 
-  // 30. WB Transport Department - Racing Sunset Orange
+  // 30. Job Search (FreeJobAlert) - Emerald & Vibrant Cyan
+  'wb-job-search': {
+    topBarGradient: 'from-emerald-500 via-teal-600 to-cyan-600',
+    cardBg: 'bg-emerald-100/75 dark:bg-[#062c21]',
+    cardBorder: 'border-emerald-300/90 dark:border-emerald-700/80 hover:border-emerald-500 dark:hover:border-emerald-400',
+    cardBgHover: 'hover:bg-emerald-200/60 dark:hover:bg-[#0a382b]',
+    iconBg: 'bg-emerald-200/90 dark:bg-emerald-900/80 border-emerald-300 dark:border-emerald-700',
+    iconColor: 'text-emerald-800 dark:text-emerald-200',
+    govBadge: 'bg-emerald-200/90 text-emerald-950 dark:bg-emerald-900/90 dark:text-emerald-100 border-emerald-400 dark:border-emerald-600',
+    subcatBadge: 'text-emerald-900 dark:text-emerald-200 bg-emerald-100/80 dark:bg-emerald-900/60 border-emerald-300/70 dark:border-emerald-700/60',
+    titleHover: 'group-hover:text-emerald-700 dark:group-hover:text-emerald-300',
+    button: 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-xs hover:shadow-emerald-500/30',
+    statusDot: 'bg-emerald-500',
+    accentHex: '#059669',
+    brandTag: 'FreeJobAlert'
+  },
+
+  // 31. WB Transport Department - Racing Sunset Orange
   'wb-transport-vahan': {
     topBarGradient: 'from-orange-500 via-amber-500 to-red-500',
     cardBg: 'bg-orange-100/75 dark:bg-[#371607]',
